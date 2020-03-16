@@ -1,0 +1,54 @@
+stages:
+    - build_binary
+    - build_docker
+    - deploy
+
+build_go_binary:
+    stage: build_binary
+    image: golang:latest
+    script:
+        - echo "building go binary"
+        - CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o dadata
+    artifacts:
+        paths:
+            - dadata
+      
+build_docker_image:
+    stage: build_docker
+    services:
+      - name: docker:18.09.8-dind
+        alias: docker-dind
+    image: docker:latest
+    variables:
+        DOCKER_HOST: tcp://docker:2375
+    script:
+#         - echo "building docker image"
+          - docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
+          - echo ${CI_REGISTRY_USER}
+          - echo ${CI_REGISTRY_PASSWORD}
+          - echo ${CI_REGISTRY}
+          - docker build -t ${CI_REGISTRY}/${CI_PROJECT_PATH}:latest .
+          - docker images
+          - docker push ${CI_REGISTRY}/${CI_PROJECT_PATH}:latest
+        
+deploy_application:
+    stage: deploy
+    image: dtzar/helm-kubectl:latest
+    script: 
+      - |
+        echo "Setting credentials"
+        kubectl config set-cluster stage --server "${CLUSTER_STAGING_URL}"
+        kubectl config set clusters.stage.certificate-authority-data "${CLUSTER_STAGING_CA}"
+        kubectl config set users.cicd.client-certificate-data "${CLUSTER_STAGING_CLIENT_CERT}"
+        kubectl config set users.cicd.client-key-data "${CLUSTER_STAGING_CLIENT_KEY}"
+        kubectl config set-context stage-cicd --cluster stage --user cicd
+        kubectl config use-context stage-cicd
+      - |
+        echo "Test cluster"
+        kubectl get nodes
+        kubectl config set-context --current --namespace=avislobokov
+        helm install dadata Chart/
+        helm list
+        kubectl get pods
+        kubectl describe pods
+

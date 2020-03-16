@@ -1,0 +1,9 @@
+replicaCount: 3
+
+image:
+  repository: registry.gitlab.safetex.ru/avislobokov/dadata
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80

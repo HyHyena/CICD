@@ -1,0 +1,31 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: dadatachart-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: \"false\"
+spec:
+  tls:
+    - hosts: 
+        - app.kube.safetex.ru
+      secretName: testsecret-tls 
+  rules:
+    - host: app.kube.safetex.ru
+      http: 
+        paths: 
+          - path: /postorg
+            backend:
+              serviceName: {{ include "dadatachart.fullname" . }}
+              servicePort: 80
+          - path: /service
+            backend:
+              serviceName: {{ include "dadatachart.fullname" . }}
+              servicePort: 80
+          - path: /iphost
+            backend:
+              serviceName: {{ include "dadatachart.fullname" . }}
+              servicePort: 80
+          - path: /hello
+            backend:
+              serviceName: hello
+              servicePort: 80
